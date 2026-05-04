@@ -1,0 +1,72 @@
+import { Router } from 'express'
+import { asyncHandler } from '../middlewares/asyncHandler.js'
+import { requireAuth } from '../middlewares/requireAuth.js'
+import { validateBody } from '../middlewares/validateBody.js'
+import { chapterChatBodySchema } from '../schemas/chapterChat.js'
+import { completeChapterBodySchema, progressEventsBodySchema } from '../schemas/chapterReader.js'
+import { highlightHelpBodySchema } from '../schemas/highlightHelp.js'
+import * as chapterChatService from '../services/chapterChatService.js'
+import * as chapterProgressService from '../services/chapterProgressService.js'
+import * as highlightHelpService from '../services/highlightHelpService.js'
+import * as readerBooksService from '../services/readerBooksService.js'
+import { pathParam } from '../utils/pathParams.js'
+
+export const chaptersPublicRouter = Router()
+
+chaptersPublicRouter.get(
+  '/:chapterId',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const result = await readerBooksService.getReaderChapter(userId, pathParam('chapterId', req.params.chapterId))
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/progress/events',
+  requireAuth,
+  validateBody(progressEventsBodySchema),
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterProgressService.appendProgressEvents(userId, chapterId, req.body)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/complete',
+  requireAuth,
+  validateBody(completeChapterBodySchema),
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterProgressService.completeChapter(userId, chapterId)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/highlight-help',
+  requireAuth,
+  validateBody(highlightHelpBodySchema),
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await highlightHelpService.runHighlightHelp(userId, chapterId, req.body)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/chat',
+  requireAuth,
+  validateBody(chapterChatBodySchema),
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterChatService.runChapterChat(userId, chapterId, req.body)
+    res.json(result)
+  }),
+)

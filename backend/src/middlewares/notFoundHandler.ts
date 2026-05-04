@@ -5,6 +5,7 @@ export function notFoundHandler(_req: Request, res: Response): void {
     error: {
       code: 'NOT_FOUND',
       message: 'Resource not found',
+      details: {},
     },
   })
 }

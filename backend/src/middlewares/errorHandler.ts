@@ -1,13 +1,7 @@
 import type { ErrorRequestHandler } from 'express'
+import { ZodError } from 'zod'
 import { env } from '../config/env.js'
-
-function httpStatus(err: unknown): number {
-  if (typeof err === 'object' && err !== null && 'status' in err) {
-    const n = Number((err as { status: unknown }).status)
-    if (Number.isFinite(n) && n >= 400 && n < 600) return n
-  }
-  return 500
-}
+import { AppError } from '../errors/AppError.js'
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   if (res.headersSent) {
@@ -15,19 +9,48 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     return
   }
 
-  const safeStatus = httpStatus(err)
-  const message =
-    safeStatus === 500 ? 'Internal server error' : err instanceof Error ? err.message : 'Error'
-
-  if (safeStatus >= 500) {
-    console.error(err)
+  if (err instanceof SyntaxError && 'body' in err && (err as SyntaxError & { status?: number }).status === 400) {
+    res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Malformed JSON body',
+        details: {},
+      },
+    })
+    return
   }
 
-  res.status(safeStatus).json({
+  if (err instanceof ZodError) {
+    res.status(422).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        details: err.flatten(),
+      },
+    })
+    return
+  }
+
+  if (err instanceof AppError) {
+    res.status(err.status).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        details: err.details && typeof err.details === 'object' ? err.details : {},
+      },
+    })
+    return
+  }
+
+  console.error(err)
+
+  const clientMessage = env.NODE_ENV === 'production' ? 'Internal server error' : err instanceof Error ? err.message : 'Internal server error'
+
+  res.status(500).json({
     error: {
       code: 'INTERNAL_ERROR',
-      message,
-      ...(env.NODE_ENV !== 'production' && err instanceof Error ? { detail: err.message } : {}),
+      message: clientMessage,
+      details: {},
     },
   })
 }

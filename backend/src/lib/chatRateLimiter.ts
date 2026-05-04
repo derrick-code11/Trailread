@@ -1,0 +1,40 @@
+import { env } from '../config/env.js'
+import { AppError } from '../errors/AppError.js'
+import { createRedisConnection } from '../queue/ioredis.js'
+
+const LIMIT = 50
+const WINDOW_SEC = 24 * 3600
+
+let redisSingleton: ReturnType<typeof createRedisConnection> | null = null
+
+function getRedis() {
+  const url = env.REDIS_URL?.trim()
+  if (!url) return null
+  if (!redisSingleton) {
+    redisSingleton = createRedisConnection()
+  }
+  return redisSingleton
+}
+
+function dayBucket(): string {
+  return String(Math.floor(Date.now() / (WINDOW_SEC * 1000)))
+}
+
+export async function assertChapterChatRateLimit(userId: string): Promise<void> {
+  const redis = getRedis()
+  if (!redis) {
+    if (env.NODE_ENV === 'production') {
+      throw new AppError('INTERNAL_ERROR', 500, 'Rate limiting unavailable', {})
+    }
+    return
+  }
+
+  const key = `rl:chapter-chat:${userId}:${dayBucket()}`
+  const n = await redis.incr(key)
+  if (n === 1) {
+    await redis.expire(key, WINDOW_SEC)
+  }
+  if (n > LIMIT) {
+    throw new AppError('RATE_LIMITED', 429, 'Too many chapter chat messages today. Try again tomorrow.', {})
+  }
+}
