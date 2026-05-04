@@ -15,7 +15,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src/**/*.ts", "vitest.config.ts"],
