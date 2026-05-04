@@ -1,57 +1,57 @@
-import { Loader2 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Loader2 } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { PasswordField } from '@/components/auth/PasswordField'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useAuth } from '@/context/AuthContext'
-import { AuthApiError, signup } from '@/lib/authApi'
+import { PasswordField } from "@/components/auth/PasswordField";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
+import { AuthApiError, signup } from "@/lib/authApi";
 
-const MIN_PASSWORD = 8
+const MIN_PASSWORD = 8;
 
 function safeReturnUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/app'
-  return raw
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/app";
+  return raw;
 }
 
 export function SignupPage() {
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const { refresh } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { refresh } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     if (password.length < MIN_PASSWORD) {
-      setError(`Password must be at least ${MIN_PASSWORD} characters.`)
-      return
+      setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+      return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.')
-      return
+      setError("Passwords do not match.");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      await signup({ email: email.trim(), password })
-      await refresh()
-      navigate(safeReturnUrl(params.get('returnUrl')))
+      await signup({ email: email.trim(), password });
+      await refresh();
+      navigate(safeReturnUrl(params.get("returnUrl")));
     } catch (err) {
       const msg =
         err instanceof AuthApiError
           ? err.message
-          : 'Something went wrong. Try again.'
-      setError(msg)
+          : "Something went wrong. Try again.";
+      setError(msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -109,7 +109,10 @@ export function SignupPage() {
         </div>
 
         {error ? (
-          <p className="font-body text-[13px] text-[var(--color-error)]" role="alert">
+          <p
+            className="font-body text-[14px] text-[var(--color-error)]"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
@@ -125,18 +128,18 @@ export function SignupPage() {
               Creating account…
             </>
           ) : (
-            'Sign up'
+            "Sign up"
           )}
         </Button>
       </form>
 
       <p className="text-center font-body text-[15px] text-[var(--color-text-secondary)]">
-        Already have an account?{' '}
+        Already have an account?{" "}
         <Link
           to={
-            params.get('returnUrl')
-              ? `/login?returnUrl=${encodeURIComponent(params.get('returnUrl')!)}`
-              : '/login'
+            params.get("returnUrl")
+              ? `/login?returnUrl=${encodeURIComponent(params.get("returnUrl")!)}`
+              : "/login"
           }
           className="font-medium text-[var(--color-primary-700)] underline-offset-2 hover:underline"
         >
@@ -144,5 +147,5 @@ export function SignupPage() {
         </Link>
       </p>
     </div>
-  )
+  );
 }
