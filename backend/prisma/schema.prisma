@@ -6,3 +6,306 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BookStatus {
+  DRAFT
+  IMPORTING_METADATA
+  FETCHING_SOURCE
+  PARSING_CHAPTERS
+  GENERATING_EMBEDDINGS
+  NEEDS_REVIEW
+  PUBLISHED
+  UNPUBLISHED
+  FAILED
+}
+
+enum ReadingMode {
+  GUIDED
+  FREE_READ
+}
+
+enum ChapterProgressStatus {
+  LOCKED
+  UNLOCKED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ArtifactType {
+  CHAPTER_SUMMARY
+  CHAPTER_QUIZ
+  PODCAST_SCRIPT
+  PODCAST_AUDIO
+}
+
+enum ArtifactStatus {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+}
+
+enum IngestionJobStatus {
+  QUEUED
+  RUNNING
+  NEEDS_REVIEW
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique
+  passwordHash         String    @map("password_hash")
+  role                 UserRole  @default(USER)
+  dailyGoalMinutes     Int       @default(15) @map("daily_goal_minutes")
+  readingStreakCurrent Int       @default(0) @map("reading_streak_current")
+  readingStreakBest    Int       @default(0) @map("reading_streak_best")
+  lastStreakDate       DateTime? @map("last_streak_date") @db.Date
+  timezone             String    @default("UTC") @map("timezone")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  userBooks           UserBook[]
+  chapterProgress     UserChapterProgress[]
+  paragraphProgress   UserParagraphProgress[]
+  quizAttempts        QuizAttempt[]
+  readingDays         ReadingDay[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model ReadingDay {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @map("user_id") @db.Uuid
+  calendarDate           DateTime @map("date") @db.Date
+  minutesRead            Int      @default(0) @map("minutes_read")
+  chaptersCompletedCount Int      @default(0) @map("chapters_completed_count")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, calendarDate])
+  @@index([userId, calendarDate])
+  @@map("reading_days")
+}
+
+model Book {
+  id          String     @id @default(uuid()) @db.Uuid
+  gutenbergId Int?       @unique @map("gutenberg_id")
+  title       String
+  author      String?
+  slug        String     @unique
+  language    String     @default("en")
+  status      BookStatus @default(DRAFT)
+  coverUrl    String?    @map("cover_url")
+  sourceUrl   String?    @map("source_url")
+  description String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  publishedAt DateTime?  @map("published_at")
+
+  chapters      Chapter[]
+  userBooks     UserBook[]
+  artifacts     AiArtifact[]
+  ingestionJobs IngestionJob[]
+
+  @@index([status])
+  @@index([title])
+  @@map("books")
+}
+
+model Chapter {
+  id             String   @id @default(uuid()) @db.Uuid
+  bookId         String   @map("book_id") @db.Uuid
+  chapterNumber  Int      @map("chapter_number")
+  title          String?
+  wordCount      Int      @default(0) @map("word_count")
+  paragraphCount Int      @default(0) @map("paragraph_count")
+  isPublished    Boolean  @default(true) @map("is_published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  book             Book                  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  paragraphs       Paragraph[]
+  userBookPointers UserBook[]
+  chapterProgress  UserChapterProgress[]
+  artifacts        AiArtifact[]
+  quizAttempts     QuizAttempt[]
+
+  @@unique([bookId, chapterNumber])
+  @@index([bookId])
+  @@map("chapters")
+}
+
+model Paragraph {
+  id             String   @id @default(uuid()) @db.Uuid
+  chapterId      String   @map("chapter_id") @db.Uuid
+  paragraphIndex Int      @map("paragraph_index")
+  text           String
+  wordCount      Int      @default(0) @map("word_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  chapter           Chapter                 @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  paragraphProgress UserParagraphProgress[]
+
+  @@unique([chapterId, paragraphIndex])
+  @@index([chapterId])
+  @@map("paragraphs")
+}
+
+model UserBook {
+  id               String      @id @default(uuid()) @db.Uuid
+  userId           String      @map("user_id") @db.Uuid
+  bookId           String      @map("book_id") @db.Uuid
+  mode             ReadingMode @default(FREE_READ)
+  currentChapterId String?     @map("current_chapter_id") @db.Uuid
+  startedAt        DateTime    @default(now()) @map("started_at")
+  lastOpenedAt     DateTime    @default(now()) @map("last_opened_at")
+  completedAt      DateTime?   @map("completed_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book           Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  currentChapter Chapter? @relation(fields: [currentChapterId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([userId, lastOpenedAt])
+  @@map("user_books")
+}
+
+model UserChapterProgress {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  chapterId            String                @map("chapter_id") @db.Uuid
+  status               ChapterProgressStatus @default(LOCKED)
+  readParagraphCount   Int                   @default(0) @map("read_paragraph_count")
+  totalParagraphCount  Int                   @default(0) @map("total_paragraph_count")
+  dwellSeconds         Int                   @default(0) @map("dwell_seconds")
+  lastParagraphIndex   Int?                  @map("last_paragraph_index")
+  completionConfidence Float                 @default(0) @map("completion_confidence")
+  manuallyCompleted    Boolean               @default(false) @map("manually_completed")
+  startedAt            DateTime?             @map("started_at")
+  completedAt          DateTime?             @map("completed_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterId])
+  @@index([chapterId])
+  @@map("user_chapter_progress")
+}
+
+model UserParagraphProgress {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  paragraphId     String    @map("paragraph_id") @db.Uuid
+  dwellSeconds    Float     @default(0) @map("dwell_seconds")
+  maxVisibleRatio Float     @default(0) @map("max_visible_ratio")
+  read            Boolean   @default(false)
+  readAt          DateTime? @map("read_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paragraph Paragraph @relation(fields: [paragraphId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, paragraphId])
+  @@index([paragraphId])
+  @@map("user_paragraph_progress")
+}
+
+model AiArtifact {
+  id          String         @id @default(uuid()) @db.Uuid
+  bookId      String         @map("book_id") @db.Uuid
+  chapterId   String         @map("chapter_id") @db.Uuid
+  type        ArtifactType
+  status      ArtifactStatus @default(PENDING)
+  contentJson Json?          @map("content_json")
+  storageKey  String?        @map("storage_key")
+  model       String?
+  error       String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  book         Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter      Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  quizAttempts QuizAttempt[]
+
+  @@unique([chapterId, type])
+  @@index([bookId])
+  @@index([status])
+  @@map("ai_artifacts")
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  chapterId   String   @map("chapter_id") @db.Uuid
+  artifactId  String?  @map("artifact_id") @db.Uuid
+  score       Int
+  total       Int
+  answersJson Json     @map("answers_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter  Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  artifact AiArtifact? @relation(fields: [artifactId], references: [id], onDelete: SetNull)
+
+  @@index([userId, chapterId])
+  @@map("quiz_attempts")
+}
+
+model IngestionJob {
+  id          String             @id @default(uuid()) @db.Uuid
+  bookId      String             @map("book_id") @db.Uuid
+  status      IngestionJobStatus @default(QUEUED)
+  step        String?
+  inputJson   Json?              @map("input_json")
+  resultJson  Json?              @map("result_json")
+  error       String?
+  createdAt   DateTime           @default(now()) @map("created_at")
+  startedAt   DateTime?          @map("started_at")
+  completedAt DateTime?          @map("completed_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([status])
+  @@map("ingestion_jobs")
+}
