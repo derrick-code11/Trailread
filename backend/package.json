@@ -11,30 +11,39 @@
     "start:worker": "node dist/worker.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node -e \"console.log('Tests skipped (Phase 0).')\"",
-    "test:watch": "node -e \"console.log('Tests skipped (Phase 0).')\"",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.76.5",
+    "cheerio": "^1.2.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "ioredis": "^5.10.1",
+    "openai": "^6.35.0",
     "prisma": "^6.19.0",
-    "@prisma/client": "^6.19.0"
+    "resend": "^6.12.2",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.10.2",
-    "@types/supertest": "^6.0.2",
+    "@types/node": "^22.19.17",
     "eslint": "^9.39.1",
     "globals": "^15.14.0",
-    "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.1",
-    "vitest": "^3.2.4"
+    "typescript-eslint": "^8.18.1"
   }
 }
