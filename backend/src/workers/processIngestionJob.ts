@@ -1,5 +1,6 @@
 import { BookStatus, IngestionJobStatus, Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma.js'
+import { ensureChapterArtifactsExist, pregenerateChapterArtifacts } from '../services/chapterArtifactsService.js'
 import { parseHtmlIntoChapters } from '../services/chapterHtmlParseService.js'
 import { parsePlainTextIntoChapters, wordCount, type ParsedChapter } from '../services/chapterParseService.js'
 import { embedTexts, insertChapterChunks, splitIntoChunks } from '../services/chunkEmbedService.js'
@@ -144,6 +145,9 @@ export async function processIngestionJob(ingestionJobId: string): Promise<void>
         paragraphStartIndex: 0,
         paragraphEndIndex: Math.max(0, ch.paragraphs.length - 1),
       })
+
+      await ensureChapterArtifactsExist(book.id, chapter.id)
+      await pregenerateChapterArtifacts(chapter.id)
     }
 
     await prisma.book.update({

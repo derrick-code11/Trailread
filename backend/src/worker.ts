@@ -2,10 +2,13 @@ import "dotenv/config";
 import { Worker } from "bullmq";
 import { env } from "./config/env.js";
 import { createRedisConnection } from "./queue/ioredis.js";
+import type { ArtifactJobPayload } from "./queue/artifactQueue.js";
 import type { IngestionJobPayload } from "./queue/ingestionQueue.js";
+import { processQueuedArtifactJob } from "./workers/processArtifactJob.js";
 import { processIngestionJob } from "./workers/processIngestionJob.js";
 
-const QUEUE_NAME = "ingestion";
+const INGESTION_QUEUE_NAME = "ingestion";
+const ARTIFACT_QUEUE_NAME = "chapter-artifacts";
 
 if (!env.REDIS_URL?.trim()) {
   console.error("[worker] REDIS_URL is required.");
@@ -14,8 +17,8 @@ if (!env.REDIS_URL?.trim()) {
 
 const connection = createRedisConnection();
 
-const worker = new Worker<IngestionJobPayload>(
-  QUEUE_NAME,
+const ingestionWorker = new Worker<IngestionJobPayload>(
+  INGESTION_QUEUE_NAME,
   async (job) => {
     const { ingestionJobId } = job.data;
     await processIngestionJob(ingestionJobId);
@@ -23,14 +26,31 @@ const worker = new Worker<IngestionJobPayload>(
   { connection },
 );
 
-worker.on("completed", (job) => {
+const artifactWorker = new Worker<ArtifactJobPayload>(
+  ARTIFACT_QUEUE_NAME,
+  async (job) => {
+    const { chapterId, type } = job.data;
+    await processQueuedArtifactJob(chapterId, type);
+  },
+  { connection },
+);
+
+ingestionWorker.on("completed", (job) => {
   console.log(`[worker] completed job ${job.id}`);
 });
 
-worker.on("failed", (job, err) => {
+artifactWorker.on("completed", (job) => {
+  console.log(`[worker] completed artifact job ${job.id}`);
+});
+
+ingestionWorker.on("failed", (job, err) => {
   console.error(`[worker] failed job ${job?.id}`, err);
 });
 
+artifactWorker.on("failed", (job, err) => {
+  console.error(`[worker] failed artifact job ${job?.id}`, err);
+});
+
 console.log(
-  `[worker] listening on queue "${QUEUE_NAME}" (NODE_ENV=${env.NODE_ENV})`,
+  `[worker] listening on queues "${INGESTION_QUEUE_NAME}" and "${ARTIFACT_QUEUE_NAME}" (NODE_ENV=${env.NODE_ENV})`,
 );

@@ -1,8 +1,4 @@
-import {
-  ArtifactStatus,
-  ArtifactType,
-  ChapterProgressStatus,
-} from '@prisma/client'
+import { ChapterProgressStatus } from '@prisma/client'
 import { AppError } from '../errors/AppError.js'
 import { prisma } from '../lib/prisma.js'
 import { requireReadableChapter } from './chapterAccess.js'
@@ -158,21 +154,6 @@ export async function appendProgressEvents(userId: string, chapterId: string, bo
   }
 }
 
-async function ensurePendingArtifacts(bookId: string, chapterId: string) {
-  for (const type of [ArtifactType.CHAPTER_SUMMARY, ArtifactType.CHAPTER_QUIZ]) {
-    await prisma.aiArtifact.upsert({
-      where: { chapterId_type: { chapterId, type } },
-      create: {
-        bookId,
-        chapterId,
-        type,
-        status: ArtifactStatus.PENDING,
-      },
-      update: {},
-    })
-  }
-}
-
 async function incrementReadingDayForCompletion(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -240,7 +221,6 @@ export async function completeChapter(userId: string, chapterId: string) {
     })
   })
 
-  await ensurePendingArtifacts(chapter.bookId, chapterId)
   await incrementReadingDayForCompletion(userId)
 
   return { ok: true as const }

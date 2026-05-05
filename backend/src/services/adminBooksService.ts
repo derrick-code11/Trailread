@@ -1,4 +1,4 @@
-import { BookStatus, IngestionJobStatus, Prisma } from '@prisma/client'
+import { ArtifactStatus, ArtifactType, BookStatus, IngestionJobStatus, Prisma } from '@prisma/client'
 import { AppError } from '../errors/AppError.js'
 import { prisma } from '../lib/prisma.js'
 import { ensureUniqueBookSlug } from './bookSlugService.js'
@@ -313,6 +313,48 @@ async function assertPublishable(bookId: string): Promise<void> {
         'Every published chapter must have embeddings before publish.',
         {},
       )
+    }
+  }
+
+  const artifacts = await prisma.aiArtifact.findMany({
+    where: {
+      bookId,
+      chapterId: { in: chapters.map((chapter) => chapter.id) },
+      type: {
+        in: [
+          ArtifactType.CHAPTER_SUMMARY,
+          ArtifactType.CHAPTER_QUIZ,
+          ArtifactType.PODCAST_SCRIPT,
+          ArtifactType.PODCAST_AUDIO,
+        ],
+      },
+    },
+    select: {
+      chapterId: true,
+      type: true,
+      status: true,
+    },
+  })
+
+  const statusByKey = new Map(
+    artifacts.map((artifact) => [`${artifact.chapterId}__${artifact.type}`, artifact.status] as const),
+  )
+
+  for (const chapter of chapters) {
+    for (const type of [
+      ArtifactType.CHAPTER_SUMMARY,
+      ArtifactType.CHAPTER_QUIZ,
+      ArtifactType.PODCAST_SCRIPT,
+      ArtifactType.PODCAST_AUDIO,
+    ]) {
+      if (statusByKey.get(`${chapter.id}__${type}`) !== ArtifactStatus.READY) {
+        throw new AppError(
+          'VALIDATION_ERROR',
+          422,
+          'Every published chapter must have summary, quiz, and podcast artifacts ready before publish.',
+          {},
+        )
+      }
     }
   }
 }

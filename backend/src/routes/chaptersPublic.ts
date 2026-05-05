@@ -2,9 +2,11 @@ import { Router } from 'express'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 import { requireAuth } from '../middlewares/requireAuth.js'
 import { validateBody } from '../middlewares/validateBody.js'
+import { quizAttemptBodySchema } from '../schemas/chapterArtifacts.js'
 import { chapterChatBodySchema } from '../schemas/chapterChat.js'
 import { completeChapterBodySchema, progressEventsBodySchema } from '../schemas/chapterReader.js'
 import { highlightHelpBodySchema } from '../schemas/highlightHelp.js'
+import * as chapterArtifactsService from '../services/chapterArtifactsService.js'
 import * as chapterChatService from '../services/chapterChatService.js'
 import * as chapterProgressService from '../services/chapterProgressService.js'
 import * as highlightHelpService from '../services/highlightHelpService.js'
@@ -67,6 +69,62 @@ chaptersPublicRouter.post(
     const userId = req.auth!.user.id
     const chapterId = pathParam('chapterId', req.params.chapterId)
     const result = await chapterChatService.runChapterChat(userId, chapterId, req.body)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.get(
+  '/:chapterId/summary',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterArtifactsService.getChapterSummary(userId, chapterId)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.get(
+  '/:chapterId/quiz',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterArtifactsService.getChapterQuiz(userId, chapterId)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/quiz-attempts',
+  requireAuth,
+  validateBody(quizAttemptBodySchema),
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterArtifactsService.submitChapterQuizAttempt(userId, chapterId, req.body)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.post(
+  '/:chapterId/podcast',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterArtifactsService.requestChapterPodcast(userId, chapterId)
+    res.json(result)
+  }),
+)
+
+chaptersPublicRouter.get(
+  '/:chapterId/podcast',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.user.id
+    const chapterId = pathParam('chapterId', req.params.chapterId)
+    const result = await chapterArtifactsService.getChapterPodcastStatus(userId, chapterId)
     res.json(result)
   }),
 )

@@ -24,6 +24,15 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
   OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL ?? 'text-embedding-3-small',
   OPENAI_CHAT_MODEL: process.env.OPENAI_CHAT_MODEL ?? 'gpt-4.1-mini',
+  OPENAI_TTS_MODEL: process.env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts',
+  OPENAI_TTS_VOICE: process.env.OPENAI_TTS_VOICE ?? 'alloy',
+
+  S3_ENDPOINT: process.env.S3_ENDPOINT ?? '',
+  S3_REGION: process.env.S3_REGION ?? 'auto',
+  S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID ?? '',
+  S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY ?? '',
+  S3_BUCKET: process.env.S3_BUCKET ?? '',
+  S3_PUBLIC_BASE_URL: process.env.S3_PUBLIC_BASE_URL ?? '',
 }
 
 export function assertProductionSecrets(): void {
