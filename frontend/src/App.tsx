@@ -39,6 +39,8 @@ export default function App() {
           <Route path="/app/books" element={<BooksLibraryPage />} />
           <Route path="/app/books/:bookSlug" element={<BookDetailPage />} />
           <Route path="/app/books/:bookSlug/chapters/:chapterNumber" element={<ChapterReaderPage />} />
+          <Route path="/app/books/:bookSlug/chapters/:chapterNumber/summary" element={<ChapterReaderPage />} />
+          <Route path="/app/books/:bookSlug/chapters/:chapterNumber/quiz" element={<ChapterReaderPage />} />
           <Route path="/app/progress" element={<ProgressPage />} />
           <Route path="/app/settings" element={<SettingsPage />} />
         </Route>

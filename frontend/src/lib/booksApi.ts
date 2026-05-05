@@ -18,6 +18,58 @@ export type ChapterChatResponse = {
   grounding: ChapterChatGrounding[]
 }
 
+export type ChapterSummaryResponse = {
+  chapterId: string
+  title: string | null
+  chapterNumber: number
+  summary: string
+  keyEvents: string[]
+  characters: { name: string; description: string }[]
+  themes: string[]
+}
+
+export type ChapterQuizResponse = {
+  chapterId: string
+  title: string | null
+  chapterNumber: number
+  questions: {
+    id: string
+    prompt: string
+    options: string[]
+  }[]
+}
+
+export type QuizAttemptRequest = {
+  answers: {
+    questionId: string
+    selectedIndex: number
+  }[]
+}
+
+export type QuizAttemptResponse = {
+  chapterId: string
+  score: number
+  total: number
+  results: {
+    questionId: string
+    prompt: string
+    options: string[]
+    selectedIndex: number | null
+    correctIndex: number
+    correct: boolean
+    explanation: string
+  }[]
+}
+
+export type ChapterPodcastStatusResponse = {
+  chapterId: string
+  status: 'PENDING' | 'GENERATING' | 'READY' | 'FAILED'
+  audioUrl: string | null
+  durationSeconds: number | null
+  transcript: string | null
+  error: string | null
+}
+
 export type CatalogBook = {
   id: string
   title: string
@@ -134,6 +186,38 @@ export async function postChapterChat(
   },
 ): Promise<ChapterChatResponse> {
   return postJson(`/api/v1/chapters/${encodeURIComponent(chapterId)}/chat`, body)
+}
+
+export async function getChapterSummary(chapterId: string): Promise<ChapterSummaryResponse> {
+  const res = await fetch(apiUrl(`/api/v1/chapters/${encodeURIComponent(chapterId)}/summary`), {
+    credentials: 'include',
+  })
+  return parseJson<ChapterSummaryResponse>(res)
+}
+
+export async function getChapterQuiz(chapterId: string): Promise<ChapterQuizResponse> {
+  const res = await fetch(apiUrl(`/api/v1/chapters/${encodeURIComponent(chapterId)}/quiz`), {
+    credentials: 'include',
+  })
+  return parseJson<ChapterQuizResponse>(res)
+}
+
+export async function postQuizAttempt(
+  chapterId: string,
+  body: QuizAttemptRequest,
+): Promise<QuizAttemptResponse> {
+  return postJson(`/api/v1/chapters/${encodeURIComponent(chapterId)}/quiz-attempts`, body)
+}
+
+export async function getChapterPodcastStatus(chapterId: string): Promise<ChapterPodcastStatusResponse> {
+  const res = await fetch(apiUrl(`/api/v1/chapters/${encodeURIComponent(chapterId)}/podcast`), {
+    credentials: 'include',
+  })
+  return parseJson<ChapterPodcastStatusResponse>(res)
+}
+
+export async function postChapterPodcast(chapterId: string): Promise<ChapterPodcastStatusResponse> {
+  return postJson(`/api/v1/chapters/${encodeURIComponent(chapterId)}/podcast`, {})
 }
 
 export function canOpenChapter(book: BookDetailResponse['book'], chapter: BookDetailChapter): boolean {
