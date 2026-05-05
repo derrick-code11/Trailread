@@ -63,12 +63,6 @@ function createLoadableState<T>(): LoadableState<T> {
   return { status: "idle", data: null, error: null };
 }
 
-function formatMinutes(seconds: number | null | undefined): string {
-  if (!seconds || seconds <= 0) return "About 2-3 minutes";
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  return `${minutes} min`;
-}
-
 export function ChapterReaderPage() {
   const { bookSlug, chapterNumber } = useParams<{
     bookSlug: string;
