@@ -6,6 +6,10 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  preview: {
+    host: "0.0.0.0",
+    allowedHosts: ["trailread.up.railway.app"]
+  },
   server: {
     proxy: {
       '/api': {
