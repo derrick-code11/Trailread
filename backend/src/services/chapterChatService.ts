@@ -9,8 +9,7 @@ import { requireReadableChapter } from './chapterAccess.js'
 import { embedTexts } from './chunkEmbedService.js'
 
 const TOP_CHUNK_LIMIT = 6
-const MIN_TOP_CHUNK_LIMIT = 4
-const MAX_CONTEXT_CHARS_PER_CHUNK = 4_800
+const MAX_CONTEXT_CHARS_PER_CHUNK = 4800
 
 type ChapterChunkRow = {
   id: string
@@ -128,7 +127,7 @@ export async function runChapterChat(userId: string, chapterId: string, body: Ch
   }
 
   const chunks = await retrieveChapterChunks(chapterId, embedding)
-  if (chunks.length < MIN_TOP_CHUNK_LIMIT) {
+  if (chunks.length === 0) {
     return {
       answer:
         'I do not have enough indexed chapter context to answer this yet. Try again after this book finishes processing.',
