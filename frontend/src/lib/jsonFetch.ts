@@ -38,6 +38,11 @@ export async function parseJson<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export async function parseBlob(res: Response): Promise<Blob> {
+  if (!res.ok) await parseError(res)
+  return res.blob()
+}
+
 export function apiUrl(path: string): string {
   const base = getApiBaseUrl()
   return `${base}${path}`

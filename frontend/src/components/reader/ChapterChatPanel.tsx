@@ -1,4 +1,4 @@
-import { Loader2, MessageSquare, Send, Sparkles, X } from "lucide-react";
+import { Loader2, MessageSquare, Send, Sparkles, Volume2, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -12,6 +12,7 @@ import {
   ApiRequestError,
   postChapterChat,
   postHighlightHelp,
+  postHighlightPronunciation,
   type ChapterChatGrounding,
   type HighlightHelpMode,
 } from "@/lib/booksApi";
@@ -98,12 +99,26 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
   const [highlightAnswer, setHighlightAnswer] = useState<string | null>(null);
   const [highlightError, setHighlightError] = useState<string | null>(null);
   const [highlightLoading, setHighlightLoading] = useState(false);
+  const [pronunciationLoading, setPronunciationLoading] = useState(false);
   const [limitationMessage, setLimitationMessage] = useState(
     "Ask about the current chapter. Answers stay grounded to retrieved chapter passages.",
   );
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pronunciationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pronunciationObjectUrlRef = useRef<string | null>(null);
+  const pronunciationRequestIdRef = useRef(0);
   const isHighlightMode = selection != null;
+  const assistantActionLoading = highlightLoading || pronunciationLoading;
+
+  const stopPronunciationAudio = useCallback(() => {
+    pronunciationAudioRef.current?.pause();
+    pronunciationAudioRef.current = null;
+    if (pronunciationObjectUrlRef.current) {
+      URL.revokeObjectURL(pronunciationObjectUrlRef.current);
+      pronunciationObjectUrlRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -111,6 +126,10 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
       behavior: "smooth",
     });
   }, [messages, loading, error]);
+
+  useEffect(() => {
+    return () => stopPronunciationAudio();
+  }, [stopPronunciationAudio]);
 
   const onMouseUp = useCallback(() => {
     const article = articleRef.current;
@@ -142,7 +161,10 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
     setSelection({ text, startIdx: Math.min(a, f), endIdx: Math.max(a, f) });
     setHighlightAnswer(null);
     setHighlightError(null);
-  }, [articleRef]);
+    setPronunciationLoading(false);
+    pronunciationRequestIdRef.current += 1;
+    stopPronunciationAudio();
+  }, [articleRef, stopPronunciationAudio]);
 
   useEffect(() => {
     document.addEventListener("mouseup", onMouseUp);
@@ -225,6 +247,53 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
     }
   };
 
+  const playHighlightPronunciation = async () => {
+    if (!selection || pronunciationLoading) return;
+    const requestId = pronunciationRequestIdRef.current + 1;
+    pronunciationRequestIdRef.current = requestId;
+    setPronunciationLoading(true);
+    setHighlightError(null);
+    try {
+      const audioBlob = await postHighlightPronunciation(chapterId, {
+        selectedText: selection.text,
+        paragraphStartIndex: selection.startIdx,
+        paragraphEndIndex: selection.endIdx,
+      });
+      if (pronunciationRequestIdRef.current !== requestId) return;
+      stopPronunciationAudio();
+      const objectUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(objectUrl);
+      pronunciationObjectUrlRef.current = objectUrl;
+      pronunciationAudioRef.current = audio;
+      audio.addEventListener(
+        "ended",
+        () => {
+          stopPronunciationAudio();
+        },
+        { once: true },
+      );
+      await audio.play();
+    } catch (e) {
+      if (pronunciationRequestIdRef.current !== requestId) return;
+      stopPronunciationAudio();
+      if (e instanceof ApiRequestError && e.status === 429) {
+        setHighlightError(
+          "Too many highlight requests this hour. Try again later.",
+        );
+      } else {
+        setHighlightError(
+          e instanceof ApiRequestError
+            ? e.message
+            : "Could not play pronunciation for this selection.",
+        );
+      }
+    } finally {
+      if (pronunciationRequestIdRef.current === requestId) {
+        setPronunciationLoading(false);
+      }
+    }
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submitQuestion(question);
@@ -238,6 +307,9 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
     setHighlightAnswer(null);
     setHighlightError(null);
     setHighlightLoading(false);
+    setPronunciationLoading(false);
+    pronunciationRequestIdRef.current += 1;
+    stopPronunciationAudio();
   };
 
   return (
@@ -303,17 +375,38 @@ export function ChapterChatPanel({ chapterId, articleRef }: Props) {
                   size="sm"
                   variant="secondary"
                   className="rounded-full px-2.5 text-[11px] font-semibold"
-                  disabled={highlightLoading}
+                  disabled={assistantActionLoading}
                   onClick={() => void runHighlightHelp(mode)}
                 >
                   {modeLabel(mode)}
                 </Button>
               ))}
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="secondary"
+                className="rounded-full"
+                disabled={assistantActionLoading}
+                aria-label="Play American English pronunciation"
+                onClick={() => void playHighlightPronunciation()}
+              >
+                {pronunciationLoading ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Volume2 className="size-3.5" aria-hidden />
+                )}
+              </Button>
             </div>
             {highlightLoading ? (
               <div className="mt-3 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                 <Loader2 className="size-4 animate-spin" aria-hidden />
                 Thinking...
+              </div>
+            ) : null}
+            {pronunciationLoading ? (
+              <div className="mt-3 flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                Preparing pronunciation...
               </div>
             ) : null}
             {highlightError ? (

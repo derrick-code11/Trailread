@@ -1,4 +1,4 @@
-import { apiUrl, parseJson, ApiRequestError } from '@/lib/jsonFetch'
+import { apiUrl, parseBlob, parseJson, ApiRequestError } from '@/lib/jsonFetch'
 
 export { ApiRequestError }
 
@@ -176,6 +176,23 @@ export async function postHighlightHelp(
   },
 ): Promise<{ answer: string; mode: HighlightHelpMode }> {
   return postJson(`/api/v1/chapters/${encodeURIComponent(chapterId)}/highlight-help`, body)
+}
+
+export async function postHighlightPronunciation(
+  chapterId: string,
+  body: {
+    selectedText: string
+    paragraphStartIndex: number
+    paragraphEndIndex: number
+  },
+): Promise<Blob> {
+  const res = await fetch(apiUrl(`/api/v1/chapters/${encodeURIComponent(chapterId)}/highlight-pronunciation`), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return parseBlob(res)
 }
 
 export async function postChapterChat(

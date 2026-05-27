@@ -10,4 +10,11 @@ export const highlightHelpBodySchema = z.object({
   mode: highlightHelpModeSchema,
 })
 
+export const highlightPronunciationBodySchema = z.object({
+  selectedText: z.string().min(1).max(160),
+  paragraphStartIndex: z.coerce.number().int().min(0),
+  paragraphEndIndex: z.coerce.number().int().min(0),
+})
+
 export type HighlightHelpBody = z.infer<typeof highlightHelpBodySchema>
+export type HighlightPronunciationBody = z.infer<typeof highlightPronunciationBodySchema>
