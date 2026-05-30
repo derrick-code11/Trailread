@@ -1,42 +1,44 @@
-import { Loader2 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Loader2 } from "lucide-react";
+import { type SubmitEvent, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { PasswordField } from '@/components/auth/PasswordField'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useAuth } from '@/context/AuthContext'
-import { AuthApiError, login } from '@/lib/authApi'
+import { PasswordField } from "@/components/auth/PasswordField";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
+import { AuthApiError, login } from "@/lib/authApi";
 
 function safeReturnUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/app'
-  return raw
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/app";
+  return raw;
 }
 
 export function LoginPage() {
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const { refresh } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { refresh } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+  async function onSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
-      await login({ email: email.trim(), password })
-      await refresh()
-      navigate(safeReturnUrl(params.get('returnUrl')))
+      await login({ email: email.trim(), password });
+      await refresh();
+      navigate(safeReturnUrl(params.get("returnUrl")));
     } catch (err) {
       const msg =
-        err instanceof AuthApiError ? err.message : 'Something went wrong. Try again.'
-      setError(msg)
+        err instanceof AuthApiError
+          ? err.message
+          : "Something went wrong. Try again.";
+      setError(msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -88,7 +90,10 @@ export function LoginPage() {
         </div>
 
         {error ? (
-          <p className="font-body text-[13px] text-[var(--color-error)]" role="alert">
+          <p
+            className="font-body text-[13px] text-[var(--color-error)]"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
@@ -104,20 +109,24 @@ export function LoginPage() {
               Signing in…
             </>
           ) : (
-            'Log in'
+            "Log in"
           )}
         </Button>
       </form>
 
       <p className="text-center font-body text-[15px] text-[var(--color-text-secondary)]">
-        Don&apos;t have an account?{' '}
+        Don&apos;t have an account?{" "}
         <Link
-          to={params.get('returnUrl') ? `/signup?returnUrl=${encodeURIComponent(params.get('returnUrl')!)}` : '/signup'}
+          to={
+            params.get("returnUrl")
+              ? `/signup?returnUrl=${encodeURIComponent(params.get("returnUrl")!)}`
+              : "/signup"
+          }
           className="font-medium text-[var(--color-primary-700)] underline-offset-2 hover:underline"
         >
           Sign up
         </Link>
       </p>
     </div>
-  )
+  );
 }
